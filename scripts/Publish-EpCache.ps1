@@ -8,16 +8,17 @@ $repositoryRoot = Split-Path -Parent $PSScriptRoot
 
 Push-Location $repositoryRoot
 try {
-  git add cache
+  $safeDirectory = 'safe.directory=' + ($repositoryRoot -replace '\\','/')
+  git -c $safeDirectory add cache
   if ($LASTEXITCODE -ne 0) { throw 'Git could not stage the refreshed public cache.' }
-  git diff --cached --quiet
+  git -c $safeDirectory diff --cached --quiet
   if ($LASTEXITCODE -eq 0) {
     Write-Host 'The EP cache is already current; nothing needs to be published.'
     exit 0
   }
-  git commit -m 'Update public EP voting-list cache'
+  git -c $safeDirectory commit -m 'Update public EP voting-list cache'
   if ($LASTEXITCODE -ne 0) { throw 'Git could not record the refreshed public cache.' }
-  git push
+  git -c $safeDirectory push
   if ($LASTEXITCODE -ne 0) { throw 'GitHub publication failed. Sign in to GitHub again and retry.' }
   Write-Host 'The refreshed public EP cache was published successfully.'
 } finally {
