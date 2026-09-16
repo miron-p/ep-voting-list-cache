@@ -1,0 +1,40 @@
+name: Update public EP voting-list cache
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "*/10 7-20 * * 1-5"
+      timezone: "Europe/Brussels"
+    - cron: "23 21 * * *"
+      timezone: "Europe/Brussels"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: update-ep-cache
+  cancel-in-progress: false
+
+jobs:
+  update:
+    runs-on: windows-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 1
+      - name: Retrieve current public EP voting lists
+        shell: pwsh
+        run: ./scripts/Update-EpCache.ps1
+      - name: Commit public cache changes
+        shell: pwsh
+        run: |
+          git config user.name "EP voting-list cache updater"
+          git config user.email "actions@users.noreply.github.com"
+          git add cache
+          if (git diff --cached --quiet) {
+            Write-Host "No cache changes to publish."
+            exit 0
+          }
+          git commit -m "Update public EP voting-list cache"
+          git push
