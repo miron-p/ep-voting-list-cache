@@ -1,10 +1,11 @@
 [CmdletBinding()]
 param(
-  [string]$RepositoryRoot = (Split-Path -Parent $PSScriptRoot)
+  [string]$RepositoryRoot = ''
 )
 
 $ErrorActionPreference = 'Stop'
 $ProgressPreference = 'SilentlyContinue'
+if (-not $RepositoryRoot) { $RepositoryRoot = Split-Path -Parent (Split-Path -Parent $MyInvocation.MyCommand.Path) }
 $votesUrl = 'https://www.europarl.europa.eu/plenary/en/votes.html'
 $cacheRoot = Join-Path $RepositoryRoot 'cache'
 $filesRoot = Join-Path $cacheRoot 'files'
@@ -16,7 +17,12 @@ $maximumBytes = 25MB
 New-Item -ItemType Directory -Force $filesRoot | Out-Null
 
 function Get-Sha256Hex([byte[]]$Bytes) {
-  return [Convert]::ToHexString([Security.Cryptography.SHA256]::HashData($Bytes)).ToLowerInvariant()
+  $algorithm = [Security.Cryptography.SHA256]::Create()
+  try {
+    return -join ($algorithm.ComputeHash($Bytes) | ForEach-Object { $_.ToString('x2') })
+  } finally {
+    $algorithm.Dispose()
+  }
 }
 
 function Get-HeaderValue($Headers, [string]$Name) {
@@ -64,8 +70,15 @@ try {
     $headers = @{}
     if ($prior -and $prior.etag) { $headers['If-None-Match'] = [string]$prior.etag }
     if ($prior -and $prior.lastModified) { $headers['If-Modified-Since'] = [string]$prior.lastModified }
-    $response = Invoke-WebRequest -UseBasicParsing -Uri $url -Headers $headers -TimeoutSec 40 -SkipHttpErrorCheck
-    $statusCode = [int]$response.StatusCode
+    $response = $null
+    $statusCode = 0
+    try {
+      $response = Invoke-WebRequest -UseBasicParsing -Uri $url -Headers $headers -TimeoutSec 40
+      $statusCode = [int]$response.StatusCode
+    } catch {
+      if ($_.Exception.Response) { $statusCode = [int]$_.Exception.Response.StatusCode }
+      if ($statusCode -ne 304) { throw }
+    }
     if ($statusCode -eq 304 -and $prior) {
       $prior.checkedAt = $checkedAt
       $prior.active = $true
