@@ -1,8 +1,8 @@
 {
     "ok":  true,
-    "checkedAt":  "2026-09-16T17:30:01.9447338+00:00",
+    "checkedAt":  "2026-09-16T17:35:01.9289244+00:00",
     "activeDocuments":  47,
-    "downloadedOrChanged":  1,
-    "unchanged":  46,
-    "message":  "EP check completed: 47 active DOCX files; 1 new or changed."
+    "downloadedOrChanged":  0,
+    "unchanged":  47,
+    "message":  "EP check completed: 47 active DOCX files; 0 new or changed."
 }
